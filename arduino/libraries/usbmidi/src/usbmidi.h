@@ -11,9 +11,11 @@
 
 #include <Arduino.h>
 #include <Stream.h>
-#include <PluggableUSB.h>
 
 #if defined(USBCON)
+
+// Requires Arduino IDE version 1.6.7.
+// todo: add compile-time check?
 
 class USBMIDI_ : public Stream
 {

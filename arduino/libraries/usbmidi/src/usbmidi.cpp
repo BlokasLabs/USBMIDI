@@ -13,10 +13,6 @@
 
 #include "midi_serialization.h"
 
-static u8 USBMIDI_ENDPOINT_IN;
-static u8 USBMIDI_ENDPOINT_OUT;
-static u8 USBMIDI_INTERFACE;
-
 #define D_AUDIO_CONTROL_INTERFACE(interfaceNumber) \
 	0x09, 0x04, interfaceNumber, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00
 
@@ -47,41 +43,84 @@ static u8 USBMIDI_INTERFACE;
 #define D_MIDI_JACK_EP_SPC(associatedJackId) \
 	0x05, 0x25, 0x01, 0x01, associatedJackId
 
-static int USBMIDI_GetInterface(u8* interfaceNum)
+class UsbMidiModule : public PluggableUSBModule
 {
-	*interfaceNum += 2;
-
-	u8 desc[] =
+public:
+	UsbMidiModule()
+		:PluggableUSBModule(2, 2, getEndpointTypes())
 	{
-		D_AUDIO_CONTROL_INTERFACE(USBMIDI_INTERFACE),
-		D_AUDIO_CONTROL_INTERFACE_SPC(0x03),
-		D_AUDIO_STREAM_INTERFACE(USBMIDI_INTERFACE + 1),
-		D_AUDIO_STREAM_INTERFACE_SPC(0x41),
-		D_MIDI_IN_JACK(D_JACK_TYPE_EMBEDDED, 0x01),
-		D_MIDI_IN_JACK(D_JACK_TYPE_EXTERNAL, 0x02),
-		D_MIDI_OUT_JACK(D_JACK_TYPE_EMBEDDED, 0x03, 0x02, 0x01),
-		D_MIDI_OUT_JACK(D_JACK_TYPE_EXTERNAL, 0x04, 0x01, 0x01),
-		D_MIDI_JACK_EP(D_ENDPOINT_OUT | USBMIDI_ENDPOINT_OUT),
-		D_MIDI_JACK_EP_SPC(0x01),
-		D_MIDI_JACK_EP(D_ENDPOINT_IN | USBMIDI_ENDPOINT_IN),
-		D_MIDI_JACK_EP_SPC(0x03),
-	};
+	}
 
-	return USB_SendControl(0, desc, sizeof(desc));
-}
+	inline uint8_t getInEndpointId() const
+	{
+		return pluggedEndpoint + 1;
+	}
 
-static int USBMIDI_GetDescriptor(int8_t t)
+	inline uint8_t getOutEndpointId() const
+	{
+		return pluggedEndpoint;
+	}
+
+	inline uint8_t getInterfaceId() const
+	{
+		return pluggedInterface;
+	}
+
+protected:
+	virtual bool setup(USBSetup& setup)
+	{
+		return false;
+	}
+
+	virtual int getInterface(uint8_t* interfaceCount)
+	{
+		*interfaceCount += 2;
+
+		u8 desc[] =
+		{
+			D_AUDIO_CONTROL_INTERFACE(pluggedInterface),
+			D_AUDIO_CONTROL_INTERFACE_SPC(0x03),
+			D_AUDIO_STREAM_INTERFACE(pluggedInterface + 1),
+			D_AUDIO_STREAM_INTERFACE_SPC(0x41),
+			D_MIDI_IN_JACK(D_JACK_TYPE_EMBEDDED, 0x01),
+			D_MIDI_IN_JACK(D_JACK_TYPE_EXTERNAL, 0x02),
+			D_MIDI_OUT_JACK(D_JACK_TYPE_EMBEDDED, 0x03, 0x02, 0x01),
+			D_MIDI_OUT_JACK(D_JACK_TYPE_EXTERNAL, 0x04, 0x01, 0x01),
+			D_MIDI_JACK_EP(D_ENDPOINT_OUT | getOutEndpointId()),
+			D_MIDI_JACK_EP_SPC(0x01),
+			D_MIDI_JACK_EP(D_ENDPOINT_IN | getInEndpointId()),
+			D_MIDI_JACK_EP_SPC(0x03),
+		};
+
+		return USB_SendControl(0, desc, sizeof(desc));
+	}
+
+	virtual int getDescriptor(USBSetup& setup)
+	{
+		return 0;
+	}
+
+private:
+	static uint8_t *getEndpointTypes()
+	{
+		static uint8_t endpointTypes[2] =
+		{
+			EP_TYPE_BULK_OUT,
+			EP_TYPE_BULK_IN,
+		};
+
+		return endpointTypes;
+	}
+};
+
+static UsbMidiModule &getUsbMidiModule()
 {
-	return 0;
-}
-
-static bool USBMIDI_Setup(USBSetup& setup, u8 i)
-{
-	return false;
+	static UsbMidiModule module;
+	return module;
 }
 
 USBMIDI_ USBMIDI;
-MidiToUsb midiToUsb(0);
+static MidiToUsb midiToUsb(0);
 
 #ifndef USBMIDI_IN_BUFFER_SIZE
 #define USBMIDI_IN_BUFFER_SIZE 64
@@ -135,7 +174,7 @@ static void pollUsb()
 	midi_event_t midiEvent;
 	int numReceived;
 
-	while (numReceived = USB_Recv(USBMIDI_ENDPOINT_OUT, &midiEvent, sizeof(midiEvent)))
+	while (numReceived = USB_Recv(getUsbMidiModule().getOutEndpointId(), &midiEvent, sizeof(midiEvent)))
 	{
 		// MIDI USB messages are 4 bytes in size.
 		if (numReceived != 4)
@@ -158,24 +197,7 @@ static void pollUsb()
 
 USBMIDI_::USBMIDI_()
 {
-	static uint8_t endpointType[2];
-
-	endpointType[0] = EP_TYPE_BULK_OUT;
-	endpointType[1] = EP_TYPE_BULK_IN;
-
-	static PUSBCallbacks cb = {
-		.setup = &USBMIDI_Setup,
-		.getInterface = &USBMIDI_GetInterface,
-		.getDescriptor = &USBMIDI_GetDescriptor,
-		.numEndpoints = 2,
-		.numInterfaces = 2,
-		.endpointType = endpointType,
-	};
-
-	static PUSBListNode node(&cb);
-
-	USBMIDI_ENDPOINT_OUT = PUSB_AddFunction(&node, &USBMIDI_INTERFACE);
-	USBMIDI_ENDPOINT_IN = USBMIDI_ENDPOINT_OUT + 1;
+	PluggableUSB().plug(&getUsbMidiModule());
 }
 
 int USBMIDI_::available()
@@ -206,7 +228,7 @@ int USBMIDI_::peek()
 
 void USBMIDI_::flush()
 {
-	USB_Flush(USBMIDI_ENDPOINT_IN);
+	USB_Flush(getUsbMidiModule().getInEndpointId());
 }
 
 size_t USBMIDI_::write(uint8_t c)
@@ -214,7 +236,7 @@ size_t USBMIDI_::write(uint8_t c)
 	midi_event_t midiEvent;
 	if (midiToUsb.process(c, midiEvent))
 	{
-		USB_Send(USBMIDI_ENDPOINT_IN, &midiEvent, sizeof(midiEvent));
+		USB_Send(getUsbMidiModule().getInEndpointId(), &midiEvent, sizeof(midiEvent));
 	}
 
 	return 1;
