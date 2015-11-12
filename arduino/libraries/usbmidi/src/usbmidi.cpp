@@ -43,138 +43,221 @@
 #define D_MIDI_JACK_EP_SPC(associatedJackId) \
 	0x05, 0x25, 0x01, 0x01, associatedJackId
 
-class UsbMidiModule : public PluggableUSBModule
-{
-public:
-	UsbMidiModule()
-		:PluggableUSBModule(2, 2, getEndpointTypes())
-	{
-	}
-
-	inline uint8_t getInEndpointId() const
-	{
-		return pluggedEndpoint + 1;
-	}
-
-	inline uint8_t getOutEndpointId() const
-	{
-		return pluggedEndpoint;
-	}
-
-	inline uint8_t getInterfaceId() const
-	{
-		return pluggedInterface;
-	}
-
-protected:
-	virtual bool setup(USBSetup& setup)
-	{
-		return false;
-	}
-
-	virtual int getInterface(uint8_t* interfaceCount)
-	{
-		*interfaceCount += 2;
-
-		u8 desc[] =
-		{
-			D_AUDIO_CONTROL_INTERFACE(pluggedInterface),
-			D_AUDIO_CONTROL_INTERFACE_SPC(0x03),
-			D_AUDIO_STREAM_INTERFACE(pluggedInterface + 1),
-			D_AUDIO_STREAM_INTERFACE_SPC(0x41),
-			D_MIDI_IN_JACK(D_JACK_TYPE_EMBEDDED, 0x01),
-			D_MIDI_IN_JACK(D_JACK_TYPE_EXTERNAL, 0x02),
-			D_MIDI_OUT_JACK(D_JACK_TYPE_EMBEDDED, 0x03, 0x02, 0x01),
-			D_MIDI_OUT_JACK(D_JACK_TYPE_EXTERNAL, 0x04, 0x01, 0x01),
-			D_MIDI_JACK_EP(D_ENDPOINT_OUT | getOutEndpointId()),
-			D_MIDI_JACK_EP_SPC(0x01),
-			D_MIDI_JACK_EP(D_ENDPOINT_IN | getInEndpointId()),
-			D_MIDI_JACK_EP_SPC(0x03),
-		};
-
-		return USB_SendControl(0, desc, sizeof(desc));
-	}
-
-	virtual int getDescriptor(USBSetup& setup)
-	{
-		return 0;
-	}
-
-private:
-	static uint8_t *getEndpointTypes()
-	{
-		static uint8_t endpointTypes[2] =
-		{
-			EP_TYPE_BULK_OUT,
-			EP_TYPE_BULK_IN,
-		};
-
-		return endpointTypes;
-	}
-};
-
-static UsbMidiModule &getUsbMidiModule()
-{
-	static UsbMidiModule module;
-	return module;
-}
-
-USBMIDI_ USBMIDI;
-static MidiToUsb midiToUsb(0);
-
 #ifndef USBMIDI_IN_BUFFER_SIZE
 #define USBMIDI_IN_BUFFER_SIZE 64
 #endif
 
-static u8 midi_in_fifo[USBMIDI_IN_BUFFER_SIZE];
-static u8 midi_in_fifo_head = 0;
-static u8 midi_in_fifo_tail = 0;
-
-static inline bool midiInFifoIsEmpty()
+class Fifo
 {
-	return midi_in_fifo_head == midi_in_fifo_tail;
+public:
+	Fifo();
+
+	bool isEmpty() const;
+	bool peek(u8 *byte) const;
+	bool pop(u8 *byte);
+	void push(u8 byte);
+	bool hasSpaceFor(u8 numBytes) const;
+
+private:
+	uint8_t m_fifo[USBMIDI_IN_BUFFER_SIZE];
+	uint8_t m_fifoHead;
+	uint8_t m_fifoTail;
+};
+
+Fifo::Fifo()
+	:m_fifoHead(0)
+	,m_fifoTail(0)
+{
 }
 
-static inline bool midiInFifoPeek(u8 *byte)
+bool Fifo::isEmpty() const
 {
-	if (midiInFifoIsEmpty())
+	return m_fifoHead == m_fifoTail;
+}
+
+bool Fifo::peek(u8 *byte) const
+{
+	if (isEmpty())
 		return false;
 
-	*byte = midi_in_fifo[midi_in_fifo_head];
+	*byte = m_fifo[m_fifoHead];
 	return true;
 }
 
-static inline bool midiInFifoPop(u8 *byte)
+bool Fifo::pop(u8 *byte)
 {
-	if (!midiInFifoPeek(byte))
+	if (!peek(byte))
 		return false;
 
-	midi_in_fifo_head = (midi_in_fifo_head + 1) % USBMIDI_IN_BUFFER_SIZE;
+	m_fifoHead = (m_fifoHead + 1) % USBMIDI_IN_BUFFER_SIZE;
 	return true;
 }
 
-static inline void midiInFifoPush(u8 byte)
+void Fifo::push(u8 byte)
 {
-	u8 nextTail = (midi_in_fifo_tail + 1) % USBMIDI_IN_BUFFER_SIZE;
+	u8 nextTail = (m_fifoTail + 1) % USBMIDI_IN_BUFFER_SIZE;
 
-	if (nextTail == midi_in_fifo_head)
+	if (nextTail == m_fifoHead)
 		return;
 
-	midi_in_fifo[midi_in_fifo_tail] = byte;
-	midi_in_fifo_tail = nextTail;
+	m_fifo[m_fifoTail] = byte;
+	m_fifoTail = nextTail;
 }
 
-static inline bool midiInFifoHasSpaceFor(u8 numBytes)
+bool Fifo::hasSpaceFor(u8 numBytes) const
 {
-	return USBMIDI_IN_BUFFER_SIZE - ((USBMIDI_IN_BUFFER_SIZE + midi_in_fifo_tail - midi_in_fifo_head) % USBMIDI_IN_BUFFER_SIZE) >= numBytes;
+	return USBMIDI_IN_BUFFER_SIZE - ((USBMIDI_IN_BUFFER_SIZE + m_fifoTail - m_fifoHead) % USBMIDI_IN_BUFFER_SIZE) >= numBytes;
 }
 
-static void pollUsb()
+class UsbMidiModule : public PluggableUSBModule
+{
+public:
+	static void install();
+
+	inline static int available() { return getInstance()._available(); }
+	inline static int read() { return getInstance()._read(); }
+	inline static int peek() { return getInstance()._peek(); }
+	inline static void flush() { return getInstance()._flush(); }
+
+	inline static size_t write(uint8_t c) { return getInstance()._write(c); }
+
+	inline static void poll() { return getInstance()._poll(); }
+
+	inline static void sendUSB(u8 midiUsbEvent, u8 data1, u8 data2, u8 data3) { getInstance()._sendUSB(midiUsbEvent, data1, data2, data3); }
+
+protected:
+	virtual bool setup(USBSetup& setup);
+	virtual int getInterface(uint8_t* interfaceCount);
+	virtual int getDescriptor(USBSetup& setup);
+
+private:
+	UsbMidiModule();
+
+	static UsbMidiModule &getInstance();
+
+	int _available();
+	int _read();
+	int _peek();
+	void _flush();
+	size_t _write(uint8_t c);
+	void _poll();
+	void _sendUSB(u8 midiUsbEvent, u8 data1, u8 data2, u8 data3);
+
+	uint8_t getInEndpointId() const;
+	uint8_t getOutEndpointId() const;
+
+	inline uint8_t getInterfaceId() const;
+
+	static uint8_t s_endpointTypes[2];
+	MidiToUsb m_midiToUsb;
+
+	Fifo m_midiInFifo;
+};
+
+uint8_t UsbMidiModule::s_endpointTypes[2] =
+{
+	EP_TYPE_BULK_OUT,
+	EP_TYPE_BULK_IN,
+};
+
+void UsbMidiModule::install()
+{
+	PluggableUSB().plug(&getInstance());
+}
+
+bool UsbMidiModule::setup(USBSetup &setup)
+{
+	return false;
+}
+
+int UsbMidiModule::getInterface(uint8_t *interfaceCount)
+{
+	*interfaceCount += 2;
+
+	u8 desc[] =
+	{
+		D_AUDIO_CONTROL_INTERFACE(pluggedInterface),
+		D_AUDIO_CONTROL_INTERFACE_SPC(0x03),
+		D_AUDIO_STREAM_INTERFACE(pluggedInterface + 1),
+		D_AUDIO_STREAM_INTERFACE_SPC(0x41),
+		D_MIDI_IN_JACK(D_JACK_TYPE_EMBEDDED, 0x01),
+		D_MIDI_IN_JACK(D_JACK_TYPE_EXTERNAL, 0x02),
+		D_MIDI_OUT_JACK(D_JACK_TYPE_EMBEDDED, 0x03, 0x02, 0x01),
+		D_MIDI_OUT_JACK(D_JACK_TYPE_EXTERNAL, 0x04, 0x01, 0x01),
+		D_MIDI_JACK_EP(D_ENDPOINT_OUT | getOutEndpointId()),
+		D_MIDI_JACK_EP_SPC(0x01),
+		D_MIDI_JACK_EP(D_ENDPOINT_IN | getInEndpointId()),
+		D_MIDI_JACK_EP_SPC(0x03),
+	};
+
+	return USB_SendControl(0, desc, sizeof(desc));
+}
+
+int UsbMidiModule::getDescriptor(USBSetup &setup)
+{
+	return 0;
+}
+
+UsbMidiModule::UsbMidiModule()
+	:PluggableUSBModule(2, 2, s_endpointTypes)
+	,m_midiToUsb(0)
+{
+}
+
+UsbMidiModule& UsbMidiModule::getInstance()
+{
+	static UsbMidiModule instance;
+	return instance;
+}
+
+int UsbMidiModule::_available()
+{
+	_poll();
+	return !m_midiInFifo.isEmpty();
+}
+
+int UsbMidiModule::_read()
+{
+	_poll();
+
+	u8 byte = 0;
+	m_midiInFifo.pop(&byte);
+
+	return byte;
+}
+
+int UsbMidiModule::_peek()
+{
+	_poll();
+
+	u8 byte = 0;
+	m_midiInFifo.peek(&byte);
+
+	return byte;
+}
+
+void UsbMidiModule::_flush()
+{
+	USB_Flush(getInEndpointId());
+}
+
+size_t UsbMidiModule::_write(uint8_t c)
+{
+	midi_event_t midiEvent;
+	if (m_midiToUsb.process(c, midiEvent))
+	{
+		USB_Send(getInEndpointId(), &midiEvent, sizeof(midiEvent));
+	}
+
+	return 1;
+}
+
+void UsbMidiModule::_poll()
 {
 	midi_event_t midiEvent;
 	int numReceived;
 
-	while (numReceived = USB_Recv(getUsbMidiModule().getOutEndpointId(), &midiEvent, sizeof(midiEvent)))
+	while (numReceived = USB_Recv(getOutEndpointId(), &midiEvent, sizeof(midiEvent)))
 	{
 		// MIDI USB messages are 4 bytes in size.
 		if (numReceived != 4)
@@ -185,66 +268,77 @@ static void pollUsb()
 
 		unsigned count = UsbToMidi::process(midiEvent, data);
 
-		if (midiInFifoHasSpaceFor(count))
+		if (m_midiInFifo.hasSpaceFor(count))
 		{
 			for (unsigned i=0; i<count; ++i)
 			{
-				midiInFifoPush(data[i]);
+				m_midiInFifo.push(data[i]);
 			}
 		}
 	}
 }
 
+void UsbMidiModule::_sendUSB(u8 midiUsbEvent, u8 data1, u8 data2, u8 data3)
+{
+	u8 packet[4];
+	packet[0] = midiUsbEvent;
+	packet[1] = data1;
+	packet[2] = data2;
+	packet[3] = data3;
+
+	USB_Send(getInEndpointId(), packet, sizeof(packet));
+}
+
+uint8_t UsbMidiModule::getInEndpointId() const
+{
+	return pluggedEndpoint + 1;
+}
+
+uint8_t UsbMidiModule::getOutEndpointId() const
+{
+	return pluggedEndpoint;
+}
+
+uint8_t UsbMidiModule::getInterfaceId() const
+{
+	return pluggedInterface;
+}
+
+USBMIDI_ USBMIDI;
+
 USBMIDI_::USBMIDI_()
 {
-	PluggableUSB().plug(&getUsbMidiModule());
+	UsbMidiModule::install();
 }
 
 int USBMIDI_::available()
 {
-	pollUsb();
-	return !midiInFifoIsEmpty();
+	return UsbMidiModule::available();
 }
 
 int USBMIDI_::read()
 {
-	pollUsb();
-
-	u8 byte = 0;
-	midiInFifoPop(&byte);
-
-	return byte;
+	return UsbMidiModule::read();
 }
 
 int USBMIDI_::peek()
 {
-	pollUsb();
-
-	u8 byte = 0;
-	midiInFifoPeek(&byte);
-
-	return byte;
+	return UsbMidiModule::peek();
 }
 
 void USBMIDI_::flush()
 {
-	USB_Flush(getUsbMidiModule().getInEndpointId());
+	UsbMidiModule::flush();
 }
 
 size_t USBMIDI_::write(uint8_t c)
 {
-	midi_event_t midiEvent;
-	if (midiToUsb.process(c, midiEvent))
-	{
-		USB_Send(getUsbMidiModule().getInEndpointId(), &midiEvent, sizeof(midiEvent));
-	}
-
-	return 1;
+	return UsbMidiModule::write(c);
 }
 
 void USBMIDI_::poll()
 {
-	pollUsb();
+	UsbMidiModule::poll();
 }
 
 #endif // USBCON

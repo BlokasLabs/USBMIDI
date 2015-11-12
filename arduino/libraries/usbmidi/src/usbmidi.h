@@ -9,6 +9,8 @@
 #ifndef USB_MIDI_H
 #define USB_MIDI_H
 
+#define USBCON
+
 #include <Arduino.h>
 #include <Stream.h>
 
