@@ -28,6 +28,6 @@ Arduino has its own similar library called MIDIUSB, it was being developed relat
 
 # Supported Devices
 
-The lirary is using Pluggable USB built-in Arduino libraries, so any processor supporting it should be usable with this library.
+The library is using Pluggable USB built-in Arduino libraries, so any processor supporting it should be usable with this library.
 
 Let us know by creating an Issue if you can't get it to work on any platform supporting Pluggable USB!
