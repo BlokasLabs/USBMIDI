@@ -29,7 +29,7 @@ section at the end of this file).
 /* This is the port where the USB bus is connected. When you configure it to
  * "B", the registers PORTB, PINB and DDRB will be used.
  */
-#define USB_CFG_DMINUS_BIT      4
+#define USB_CFG_DMINUS_BIT      7
 /* This is the bit number in USB_CFG_IOPORT where the USB D- line is connected.
  * This may be any bit in the port.
  */
@@ -74,7 +74,7 @@ section at the end of this file).
 
 /* --------------------------- Functional Range ---------------------------- */
 
-#define USB_CFG_HAVE_INTRIN_ENDPOINT    0
+#define USB_CFG_HAVE_INTRIN_ENDPOINT    1
 /* Define this to 1 if you want to compile a version with two endpoints: The
  * default control endpoint 0 and an interrupt-in endpoint (any other endpoint
  * number).
@@ -95,7 +95,7 @@ section at the end of this file).
  * Since the token is toggled BEFORE sending any data, the first packet is
  * sent with the oposite value of this configuration!
  */
-#define USB_CFG_IMPLEMENT_HALT          0
+#define USB_CFG_IMPLEMENT_HALT          1
 /* Define this to 1 if you also want to implement the ENDPOINT_HALT feature
  * for endpoint 1 (interrupt endpoint). Although you may not need this feature,
  * it is required by the standard. We have made it a config option because it
@@ -118,7 +118,7 @@ section at the end of this file).
 /* Define this to 1 if the device has its own power supply. Set it to 0 if the
  * device is powered from the USB bus.
  */
-#define USB_CFG_MAX_BUS_POWER           100
+#define USB_CFG_MAX_BUS_POWER           250
 /* Set this variable to the maximum USB bus power consumption of your device.
  * The value is in milliamperes. [It will be divided by two since USB
  * communicates power requirements in units of 2 mA.]
@@ -134,7 +134,7 @@ section at the end of this file).
  * data from a static buffer, set it to 0 and return the data from
  * usbFunctionSetup(). This saves a couple of bytes.
  */
-#define USB_CFG_IMPLEMENT_FN_WRITEOUT   0
+#define USB_CFG_IMPLEMENT_FN_WRITEOUT   1
 /* Define this to 1 if you want to use interrupt-out (or bulk out) endpoints.
  * You must implement the function usbFunctionWriteOut() which receives all
  * interrupt/bulk data sent to any endpoint other than 0. The endpoint number
@@ -227,7 +227,7 @@ section at the end of this file).
  * with libusb: 0x16c0/0x5dc.  Use this VID/PID pair ONLY if you understand
  * the implications!
  */
-#define  USB_CFG_DEVICE_ID       0xdc, 0x05 /* = 0x05dc = 1500 */
+#define  USB_CFG_DEVICE_ID       0xe4, 0x05 /* = 0x05e4 = 1508 */
 /* This is the ID of the product, low byte first. It is interpreted in the
  * scope of the vendor ID. If you have registered your own VID with usb.org
  * or if you have licensed a PID from somebody else, define it here. Otherwise
@@ -241,8 +241,8 @@ section at the end of this file).
 #define USB_CFG_DEVICE_VERSION  0x00, 0x01
 /* Version number of the device: Minor number first, then major number.
  */
-#define USB_CFG_VENDOR_NAME     'o', 'b', 'd', 'e', 'v', '.', 'a', 't'
-#define USB_CFG_VENDOR_NAME_LEN 8
+#define USB_CFG_VENDOR_NAME     'b', 'l', 'o', 'k', 'a', 's', '.', 'i', 'o'
+#define USB_CFG_VENDOR_NAME_LEN 9
 /* These two values define the vendor name returned by the USB device. The name
  * must be given as a list of characters under single quotes. The characters
  * are interpreted as Unicode (UTF-16) entities.
@@ -251,8 +251,8 @@ section at the end of this file).
  * obdev's free shared VID/PID pair. See the file USB-IDs-for-free.txt for
  * details.
  */
-#define USB_CFG_DEVICE_NAME     'T', 'e', 'm', 'p', 'l', 'a', 't', 'e'
-#define USB_CFG_DEVICE_NAME_LEN 8
+#define USB_CFG_DEVICE_NAME     'M', 'i', 'd', 'i', 'm', 'o', 'n'
+#define USB_CFG_DEVICE_NAME_LEN 7
 /* Same as above for the device name. If you don't want a device name, undefine
  * the macros. See the file USB-IDs-for-free.txt before you assign a name if
  * you use a shared VID/PID.
@@ -266,13 +266,13 @@ section at the end of this file).
  * to fine tune control over USB descriptors such as the string descriptor
  * for the serial number.
  */
-#define USB_CFG_DEVICE_CLASS        0xff    /* set to 0 if deferred to interface */
+#define USB_CFG_DEVICE_CLASS        0    /* set to 0 if deferred to interface */
 #define USB_CFG_DEVICE_SUBCLASS     0
 /* See USB specification if you want to conform to an existing device class.
  * Class 0xff is "vendor specific".
  */
-#define USB_CFG_INTERFACE_CLASS     0   /* define class here if not at device level */
-#define USB_CFG_INTERFACE_SUBCLASS  0
+#define USB_CFG_INTERFACE_CLASS     1   /* define class here if not at device level */
+#define USB_CFG_INTERFACE_SUBCLASS  3
 #define USB_CFG_INTERFACE_PROTOCOL  0
 /* See USB specification if you want to conform to an existing device class or
  * protocol. The following classes must be set at interface level:
@@ -344,8 +344,8 @@ section at the end of this file).
  * };
  */
 
-#define USB_CFG_DESCR_PROPS_DEVICE                  0
-#define USB_CFG_DESCR_PROPS_CONFIGURATION           0
+#define USB_CFG_DESCR_PROPS_DEVICE                  USB_PROP_IS_DYNAMIC
+#define USB_CFG_DESCR_PROPS_CONFIGURATION           USB_PROP_IS_DYNAMIC
 #define USB_CFG_DESCR_PROPS_STRINGS                 0
 #define USB_CFG_DESCR_PROPS_STRING_0                0
 #define USB_CFG_DESCR_PROPS_STRING_VENDOR           0
