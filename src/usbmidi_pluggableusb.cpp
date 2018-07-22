@@ -7,9 +7,10 @@
  */
 
 #include "usbmidi.h"
-#include <PluggableUSB.h>
 
 #if defined(USBCON)
+
+#include <PluggableUSB.h>
 
 #include "midi_serialization.h"
 
@@ -46,68 +47,6 @@
 #ifndef USBMIDI_IN_BUFFER_SIZE
 #define USBMIDI_IN_BUFFER_SIZE 64
 #endif
-
-class Fifo
-{
-public:
-	Fifo();
-
-	bool isEmpty() const;
-	bool peek(u8 *byte) const;
-	bool pop(u8 *byte);
-	void push(u8 byte);
-	bool hasSpaceFor(u8 numBytes) const;
-
-private:
-	uint8_t m_fifo[USBMIDI_IN_BUFFER_SIZE];
-	uint8_t m_fifoHead;
-	uint8_t m_fifoTail;
-};
-
-Fifo::Fifo()
-	:m_fifoHead(0)
-	,m_fifoTail(0)
-{
-}
-
-bool Fifo::isEmpty() const
-{
-	return m_fifoHead == m_fifoTail;
-}
-
-bool Fifo::peek(u8 *byte) const
-{
-	if (isEmpty())
-		return false;
-
-	*byte = m_fifo[m_fifoHead];
-	return true;
-}
-
-bool Fifo::pop(u8 *byte)
-{
-	if (!peek(byte))
-		return false;
-
-	m_fifoHead = (m_fifoHead + 1) % USBMIDI_IN_BUFFER_SIZE;
-	return true;
-}
-
-void Fifo::push(u8 byte)
-{
-	u8 nextTail = (m_fifoTail + 1) % USBMIDI_IN_BUFFER_SIZE;
-
-	if (nextTail == m_fifoHead)
-		return;
-
-	m_fifo[m_fifoTail] = byte;
-	m_fifoTail = nextTail;
-}
-
-bool Fifo::hasSpaceFor(u8 numBytes) const
-{
-	return USBMIDI_IN_BUFFER_SIZE - ((USBMIDI_IN_BUFFER_SIZE + m_fifoTail - m_fifoHead) % USBMIDI_IN_BUFFER_SIZE) >= numBytes;
-}
 
 class UsbMidiModule : public PluggableUSBModule
 {
