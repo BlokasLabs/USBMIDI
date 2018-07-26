@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2015 Blokas Labs
+ * Copyright (C) 2015-2018 UAB Vilniaus Blokas
  * All rights reserved.
  *
  * This software may be modified and distributed under the terms
@@ -7,25 +7,14 @@
  */
 
 #include "midi_serialization.h"
+#include "midi_messages.h"
 
-static inline bool midi_is_real_time(uint8_t byte)
+MidiToUsb::MidiToUsb()
+	:m_cable(0)
+	,m_status(0)
+	,m_counter(0)
+	,m_sysex(false)
 {
-	return byte == 0xf8 || (byte >= 0xfa && byte != 0xfd);
-}
-
-static inline bool midi_is_sysex_start(uint8_t byte)
-{
-	return byte == 0xf0;
-}
-
-static inline bool midi_is_sysex_end(uint8_t byte)
-{
-	return byte == 0xf7;
-}
-
-static inline bool midi_is_single_byte_system_common(uint8_t byte)
-{
-	return byte >= 0xf4 && byte <= 0xf6;
 }
 
 MidiToUsb::MidiToUsb(int cable)
@@ -38,6 +27,13 @@ MidiToUsb::MidiToUsb(int cable)
 	{
 		m_data[i] = 0;
 	}
+}
+
+void MidiToUsb::reset()
+{
+	m_status = 0;
+	m_counter = 0;
+	m_sysex = false;
 }
 
 void MidiToUsb::setCable(int cable)
@@ -60,7 +56,7 @@ bool MidiToUsb::process(uint8_t byte, midi_event_t &out)
 			out.m_data[0] = byte;
 			out.m_data[1] = 0;
 			out.m_data[2] = 0;
-			m_counter = 0;
+			//m_counter = 0;
 			return true;
 		}
 		else if (midi_is_single_byte_system_common(byte))
@@ -170,6 +166,9 @@ bool MidiToUsb::process(uint8_t byte, midi_event_t &out)
 				return true;
 			}
 			break;
+		case 0x00:
+			m_counter = 0;
+			return false;
 		}
 	}
 
@@ -209,4 +208,9 @@ unsigned UsbToMidi::process(midi_event_t in, uint8_t out[3])
 	default: // unhandled 0x0 and 0x1 ("reserved for future")
 		return 0;
 	}
+}
+
+extern "C" unsigned usb_to_midi(struct midi_event_t in, uint8_t out[3])
+{
+	return UsbToMidi::process(in, out);
 }

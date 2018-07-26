@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2015 Blokas Labs
+ * Copyright (C) 2015-2018 UAB Vilniaus Blokas
  * All rights reserved.
  *
  * This software may be modified and distributed under the terms
@@ -8,6 +8,8 @@
 
 #ifndef MIDI_SERIALIZATION_H
 #define MIDI_SERIALIZATION_H
+
+#include <stdint.h>
 
 typedef unsigned char uint8_t;
 
@@ -22,7 +24,10 @@ struct midi_event_t
 class MidiToUsb
 {
 public:
+	MidiToUsb();
 	explicit MidiToUsb(int cable);
+
+	void reset();
 
 	void setCable(int cable);
 	int getCable() const;
@@ -46,5 +51,15 @@ public:
 };
 
 #endif // __cplusplus
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+unsigned usb_to_midi(struct midi_event_t in, uint8_t out[3]);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif // MIDI_SERIALIZATION_H

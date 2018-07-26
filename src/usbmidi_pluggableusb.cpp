@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2015 Blokas Labs
+ * Copyright (C) 2015-2018 UAB Vilniaus Blokas
  * All rights reserved.
  *
  * This software may be modified and distributed under the terms
