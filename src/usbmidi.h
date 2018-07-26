@@ -13,10 +13,8 @@
 #ifndef USB_MIDI_H
 #define USB_MIDI_H
 
-#include <Arduino.h>
 #include <Stream.h>
 
-// Requires Arduino IDE version >= 1.6.7.
 class USBMIDI_ : public Stream
 {
 public:
@@ -33,9 +31,6 @@ public:
 
 	// Poll for new USB data. Should be called from loop() to handle incoming MIDI data.
 	void poll();
-
-	// Send data using MIDI USB protocol.
-	void sendUSB(u8 midiUsbEvent, u8 data1, u8 data2, u8 data3);
 };
 
 extern USBMIDI_ USBMIDI;

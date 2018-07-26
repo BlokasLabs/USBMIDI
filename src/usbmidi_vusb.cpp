@@ -1,6 +1,8 @@
-#include <arduino.h>
+#include <avr/io.h>
 
 #ifndef USBCON
+
+// Based on V-USB-MIDI project: http://cryptomys.de/horo/V-USB-MIDI/index.html
 
 #include "usbdrv.h"
 
@@ -177,6 +179,9 @@ static const PROGMEM char configDescrMIDI[] =
 	3,                      // baAssocJackID (0)
 };
 
+static TFifo<uint8_t, uint8_t, 64> g_midiInput;
+static TFifo<uint8_t, uint8_t, 64> g_midiOutput;
+static MidiToUsb g_serializer(0);
 
 uint8_t usbFunctionDescriptor(usbRequest_t * rq)
 {
@@ -185,75 +190,39 @@ uint8_t usbFunctionDescriptor(usbRequest_t * rq)
 		usbMsgPtr = (uint8_t*)deviceDescrMIDI;
 		return sizeof(deviceDescrMIDI);
 	}
-	else // Must be config descriptor.
+	else if (rq->wValue.bytes[1] == USBDESCR_CONFIG)
 	{
 		usbMsgPtr = (uint8_t*)configDescrMIDI;
 		return sizeof(configDescrMIDI);
 	}
+
+	return 0;
 }
 
 static uint8_t sendEmptyFrame;
 
 uint8_t usbFunctionSetup(uint8_t data[8])
 {
-	usbRequest_t *rq = (void *)data;
-
-	if ((rq->bmRequestType & USBRQ_TYPE_MASK) == USBRQ_TYPE_CLASS)
-	{
-		// Prepare bulk-in endpoint to respond to early termination.
-		if ((rq->bmRequestType & USBRQ_DIR_MASK) == USBRQ_DIR_HOST_TO_DEVICE)
-			sendEmptyFrame = 1;
-	}
-
-	return 0xff;
-}
-
-// Called when PC asks to fill MIDI messages sent to PC.
-uint8_t usbFunctionRead(uint8_t * data, uint8_t len)
-{
-	data[0] = 0;
-	data[1] = 0;
-	data[2] = 0;
-	data[3] = 0;
-	data[4] = 0;
-	data[5] = 0;
-	data[6] = 0;
-
-	return 7;
-}
-
-uint8_t usbFunctionWrite(uint8_t * data, uint8_t len)
-{
-	return 1;
+	return 0;
 }
 
 // Called when receiving MIDI message from PC.
-void usbFunctionWriteOut(uint8_t * data, u8 len)
+void usbFunctionWriteOut(uint8_t * data, uint8_t len)
 {
-#if 0
 	uint8_t m[3];
 	for (int i = 0; i<len; i += 4)
 	{
 		midi_event_t event;
-		event.m_event = data[i + 0];
-		event.m_data[0] = data[i + 1];
-		event.m_data[1] = data[i + 2];
-		event.m_data[2] = data[i + 3];
+		event.m_event   = data[i+0];
+		event.m_data[0] = data[i+1];
+		event.m_data[1] = data[i+2];
+		event.m_data[2] = data[i+3];
 		if (UsbToMidi::process(event, m))
 		{
-			Serial.write(m[0]);
-			Serial.write(m[1]);
-			Serial.write(m[2]);
+			g_midiInput.push(m[0]);
+			g_midiInput.push(m[1]);
+			g_midiInput.push(m[2]);
 		}
-	}
-#endif
-
-	if (len >= 4)
-	{
-		//msg[1] = data[1];
-		//msg[2] = data[2];
-		//msg[3] = data[3];
-		//msg[0] = data[0];
 	}
 }
 
@@ -271,8 +240,6 @@ static void midiUsbInit(void)
 #endif
 
 	// USB Reset by device only required on Watchdog Reset.
-	//delay(10); // delay 10ms for USB reset.
-
 	uint8_t j = 0;
 	while (--j) {   /* USB Reset by device only required on Watchdog Reset */
 		uint8_t i = 0;
@@ -288,93 +255,6 @@ static void midiUsbInit(void)
 	usbInit();
 }
 
-#if 0
-int main(void)
-{
-  int adcOld[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
-  uchar key, lastKey = 0;
-  uchar keyDidChange = 0;
-  uchar midiMsg[8];
-  uchar channel = 0;
-  int value;
-  uchar iii;
-
-  wdt_enable(WDTO_1S);
-  hardwareInit();
-  odDebugInit();
-  usbInit();
-
-  sendEmptyFrame = 0;
-
-  sei();
-  
-  // only ADC channel 6 and channel 7 are used
-  channel = 6;
-  for (;;) {    // main event loop
-	wdt_reset();
-	usbPoll();
-
-	key = keyPressed();
-	if (lastKey != key)
-	  keyDidChange = 1;
-
-	if (usbInterruptIsReady()) {
-	  if (keyDidChange) {
-		// DEBUG LED
-		PORTC ^= 0x40;
-		// use last key and not current key status in order to avoid lost
-		   changes in key status.
-		// up to two midi events in one midi msg.
-		// For description of USB MIDI msg see:
-		// http://www.usb.org/developers/devclass_docs/midi10.pdf
-		// 4. USB MIDI Event Packets
-		iii = 0;
-		if (lastKey) {  // release
-		  midiMsg[iii++] = 0x08;
-		  midiMsg[iii++] = 0x80;
-		  midiMsg[iii++] = lastKey;
-		  midiMsg[iii++] = 0x00;
-		}
-		if (key) {  // press
-		  midiMsg[iii++] = 0x09;
-		  midiMsg[iii++] = 0x90;
-		  midiMsg[iii++] = key;
-		  midiMsg[iii++] = 0x7f;
-		}
-		if (8 == iii)
-		  sendEmptyFrame = 1;
-		else
-		  sendEmptyFrame = 0;
-		usbSetInterrupt(midiMsg, iii);
-		keyDidChange = 0;
-		lastKey = key;
-	  } else {  // if no key event check analog input
-		value = adc(channel); // 0..1023
-		// hysteresis
-		if (adcOld[channel] - value > 7
-			|| adcOld[channel] - value < -7) {
-		  // DEBUG LED
-		  PORTC ^= 0x80;
-		  adcOld[channel] = value;
-		  // MIDI CC msg
-		  midiMsg[0] = 0x0b;
-		  midiMsg[1] = 0xb0;
-		  midiMsg[2] = channel + 70;  // cc 70..77 
-		  midiMsg[3] = value >> 3;
-		  sendEmptyFrame = 0;
-		  usbSetInterrupt(midiMsg, 4);
-		}
-		channel++;
-		channel &= 0x07;
-		if (0 == channel)
-		  channel = 6;
-	  }
-	}   // usbInterruptIsReady()
-  }
-  return 0;
-}
-#endif
-
 USBMIDI_ USBMIDI;
 
 USBMIDI_::USBMIDI_()
@@ -384,30 +264,77 @@ USBMIDI_::USBMIDI_()
 
 int USBMIDI_::available()
 {
-	return 0;
+	return g_midiInput.size();
 }
 
 int USBMIDI_::read()
 {
-	return 0;
+	uint8_t byte;
+	if (g_midiInput.pop(byte))
+	{
+		return byte;
+	}
+	else return -1;
 }
 
 int USBMIDI_::peek()
 {
-	return 0;
+	uint8_t byte;
+	if (g_midiInput.peek(byte))
+	{
+		return byte;
+	}
+	else return -1;
 }
 
 void USBMIDI_::flush()
 {
+	while (!g_midiOutput.empty())
+	{
+		poll();
+	}
 }
 
 size_t USBMIDI_::write(uint8_t c)
 {
-	return 0;
+	if (g_midiOutput.full())
+		flush();
+
+	g_midiOutput.push(c);
+	return sizeof(c);
+}
+
+static uint8_t fillBuffer(uint8_t buffer[8])
+{
+	midi_event_t ev;
+	uint8_t byte;
+	uint8_t n=0;
+	for (uint8_t i=0; !g_midiOutput.empty() && i<2; ++i)
+	{
+		while (g_midiOutput.pop(byte))
+		{
+			if (g_serializer.process(byte, ev))
+			{
+				memcpy(&buffer[i * sizeof(ev)], &ev, sizeof(ev));
+				++n;
+				break;
+			}
+		}
+	}
+
+	return n * sizeof(ev);
 }
 
 void USBMIDI_::poll()
 {
+	if (!g_midiOutput.empty() && usbInterruptIsReady())
+	{
+		uint8_t buffer[8];
+		uint8_t n = fillBuffer(buffer);
+
+		if (n)
+			usbSetInterrupt(buffer, n);
+	}
 	usbPoll();
 }
 

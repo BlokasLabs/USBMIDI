@@ -62,8 +62,6 @@ public:
 
 	inline static void poll() { return getInstance()._poll(); }
 
-	inline static void sendUSB(u8 midiUsbEvent, u8 data1, u8 data2, u8 data3) { getInstance()._sendUSB(midiUsbEvent, data1, data2, data3); }
-
 protected:
 	virtual bool setup(USBSetup& setup);
 	virtual int getInterface(uint8_t* interfaceCount);
@@ -80,7 +78,6 @@ private:
 	void _flush();
 	size_t _write(uint8_t c);
 	void _poll();
-	void _sendUSB(u8 midiUsbEvent, u8 data1, u8 data2, u8 data3);
 
 	uint8_t getInEndpointId() const;
 	uint8_t getOutEndpointId() const;
@@ -215,17 +212,6 @@ void UsbMidiModule::_poll()
 			}
 		}
 	}
-}
-
-void UsbMidiModule::_sendUSB(u8 midiUsbEvent, u8 data1, u8 data2, u8 data3)
-{
-	u8 packet[4];
-	packet[0] = midiUsbEvent;
-	packet[1] = data1;
-	packet[2] = data2;
-	packet[3] = data3;
-
-	USB_Send(getInEndpointId(), packet, sizeof(packet));
 }
 
 uint8_t UsbMidiModule::getInEndpointId() const

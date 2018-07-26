@@ -9,6 +9,7 @@ public:
 
 	bool empty() const;
 	bool full() const;
+	IndexType size() const;
 
 	bool peek(T &item) const;
 	void advance();
@@ -38,6 +39,18 @@ template <typename T, typename IndexType, const IndexType N>
 inline bool TFifo<T, IndexType, N>::empty() const
 {
 	return m_front == m_back;
+}
+
+template <typename T, typename IndexType, const IndexType N>
+inline bool TFifo<T, IndexType, N>::full() const
+{
+	return m_front == next(m_back);
+}
+
+template <typename T, typename IndexType, const IndexType N>
+inline IndexType TFifo<T, IndexType, N>::size() const
+{
+	return (m_back - m_front + N) % N;
 }
 
 template <typename T, typename IndexType, const IndexType N>
