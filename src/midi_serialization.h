@@ -56,6 +56,7 @@ public:
 extern "C" {
 #endif
 
+unsigned midi_get_data_length(struct midi_event_t ev);
 unsigned usb_to_midi(struct midi_event_t in, uint8_t out[3]);
 
 #ifdef __cplusplus

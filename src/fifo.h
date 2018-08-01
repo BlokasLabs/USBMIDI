@@ -9,6 +9,8 @@
 #ifndef FIFO_H
 #define FIFO_H
 
+#include <string.h>
+
 template <typename T, typename IndexType, const IndexType N>
 class TFifo
 {

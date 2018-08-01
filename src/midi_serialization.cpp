@@ -9,6 +9,36 @@
 #include "midi_serialization.h"
 #include "midi_messages.h"
 
+extern "C" unsigned midi_get_data_length(midi_event_t ev)
+{
+	// http://www.usb.org/developers/docs/devclass_docs/midi10.pdf, page 16
+	switch (ev.m_event & 0x0f)
+	{
+	case 0x5:
+	case 0xF:
+		// 1 byte message
+		return 1;
+	case 0x2:
+	case 0x6:
+	case 0xC:
+	case 0xD:
+		// 2 byte message
+		return 2;
+	case 0x3:
+	case 0x4:
+	case 0x7:
+	case 0x8:
+	case 0x9:
+	case 0xA:
+	case 0xB:
+	case 0xE:
+		// 3 byte message
+		return 3;
+	default: // Unhandled 0x0 and 0x1 ("reserved for future")
+		return 0;
+	}
+}
+
 MidiToUsb::MidiToUsb()
 	:m_cable(0)
 	,m_status(0)

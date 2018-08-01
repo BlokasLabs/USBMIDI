@@ -13,6 +13,7 @@
 // This USBMIDI implementation is based on V-USB-MIDI project: http://cryptomys.de/horo/V-USB-MIDI/index.html
 
 #include <avr/io.h>
+#include <avr/pgmspace.h>
 
 #ifndef USBCON
 
@@ -199,12 +200,12 @@ uint8_t usbFunctionDescriptor(usbRequest_t * rq)
 {
 	if (rq->wValue.bytes[1] == USBDESCR_DEVICE)
 	{
-		usbMsgPtr = (uint8_t*)deviceDescrMIDI;
+		usbMsgPtr = (usbMsgPtr_t)deviceDescrMIDI;
 		return sizeof(deviceDescrMIDI);
 	}
 	else if (rq->wValue.bytes[1] == USBDESCR_CONFIG)
 	{
-		usbMsgPtr = (uint8_t*)configDescrMIDI;
+		usbMsgPtr = (usbMsgPtr_t)configDescrMIDI;
 		return sizeof(configDescrMIDI);
 	}
 
@@ -222,18 +223,17 @@ uint8_t usbFunctionSetup(uint8_t data[8])
 void usbFunctionWriteOut(uint8_t * data, uint8_t len)
 {
 	uint8_t m[3];
-	for (int i = 0; i<len; i += 4)
+	for (uint8_t i=0; i<len; i+=4)
 	{
 		midi_event_t event;
 		event.m_event   = data[i+0];
 		event.m_data[0] = data[i+1];
 		event.m_data[1] = data[i+2];
 		event.m_data[2] = data[i+3];
-		if (UsbToMidi::process(event, m))
+		uint8_t n = UsbToMidi::process(event, m);
+		for (uint8_t j=0; j<n; ++j)
 		{
-			g_midiInput.push(m[0]);
-			g_midiInput.push(m[1]);
-			g_midiInput.push(m[2]);
+			g_midiInput.push(m[j]);
 		}
 	}
 }
