@@ -157,7 +157,7 @@ bool MidiToUsb::process(uint8_t byte, midi_event_t &out)
 				m_counter = 0;
 				return true;
 			case 0x2: // Song Position Pointer
-				if (m_counter == 1)
+				if (m_counter == 2)
 				{
 					out.m_event = m_cable | 0x03;
 					out.m_data[0] = m_status;
