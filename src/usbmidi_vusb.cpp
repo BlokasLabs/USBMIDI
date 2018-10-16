@@ -196,7 +196,10 @@ static TFifo<uint8_t, uint8_t, 64> g_midiInput;
 static TFifo<uint8_t, uint8_t, 64> g_midiOutput;
 static MidiToUsb g_serializer(0);
 
-uint8_t usbFunctionDescriptor(usbRequest_t * rq)
+__attribute__((weak)) USBMIDI_DEFINE_VENDOR_NAME(USB_CFG_VENDOR_NAME);
+__attribute__((weak)) USBMIDI_DEFINE_PRODUCT_NAME(USB_CFG_DEVICE_NAME);
+
+usbMsgLen_t usbFunctionDescriptor(usbRequest_t * rq)
 {
 	if (rq->wValue.bytes[1] == USBDESCR_DEVICE)
 	{
@@ -208,11 +211,26 @@ uint8_t usbFunctionDescriptor(usbRequest_t * rq)
 		usbMsgPtr = (usbMsgPtr_t)configDescrMIDI;
 		return sizeof(configDescrMIDI);
 	}
+	else if (rq->wValue.bytes[1] == USBDESCR_STRING)
+	{
+		if (rq->wValue.bytes[0] == 1)
+		{
+			const uint8_t *data;
+			usbMsgLen_t n = _usbmidi_get_vendor_string(data);
+			usbMsgPtr = (usbMsgPtr_t)data;
+			return n;
+		}
+		else if (rq->wValue.bytes[0] == 2)
+		{
+			const uint8_t *data;
+			usbMsgLen_t n = _usbmidi_get_product_string(data);
+			usbMsgPtr = (usbMsgPtr_t)data;
+			return n;
+		}
+	}
 
 	return 0;
 }
-
-static uint8_t sendEmptyFrame;
 
 uint8_t usbFunctionSetup(uint8_t data[8])
 {

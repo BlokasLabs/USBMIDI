@@ -269,7 +269,7 @@ section at the end of this file).
  * obdev's free shared VID/PID pair. See the file USB-IDs-for-free.txt for
  * details.
  */
-#define USB_CFG_DEVICE_NAME     'M', 'i', 'd', 'i', 'm', 'o', 'n'
+#define USB_CFG_DEVICE_NAME     'U', 'S', 'B', 'M', 'I', 'D', 'I'
 #define USB_CFG_DEVICE_NAME_LEN 7
 /* Same as above for the device name. If you don't want a device name, undefine
  * the macros. See the file USB-IDs-for-free.txt before you assign a name if
@@ -366,8 +366,8 @@ section at the end of this file).
 #define USB_CFG_DESCR_PROPS_CONFIGURATION           USB_PROP_IS_DYNAMIC
 #define USB_CFG_DESCR_PROPS_STRINGS                 0
 #define USB_CFG_DESCR_PROPS_STRING_0                0
-#define USB_CFG_DESCR_PROPS_STRING_VENDOR           0
-#define USB_CFG_DESCR_PROPS_STRING_PRODUCT          0
+#define USB_CFG_DESCR_PROPS_STRING_VENDOR           USB_PROP_IS_DYNAMIC
+#define USB_CFG_DESCR_PROPS_STRING_PRODUCT          USB_PROP_IS_DYNAMIC
 #define USB_CFG_DESCR_PROPS_STRING_SERIAL_NUMBER    0
 #define USB_CFG_DESCR_PROPS_HID                     0
 #define USB_CFG_DESCR_PROPS_HID_REPORT              0

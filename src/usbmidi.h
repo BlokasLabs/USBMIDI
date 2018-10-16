@@ -35,4 +35,37 @@ public:
 
 extern USBMIDI_ USBMIDI;
 
+/*
+ * USBMIDI_DEFINE_VENDOR_NAME and USB_DEFINE_PRODUCT_NAME macros can be used to customize the USB Device strings.
+ * Instead of accepting regular double-quote strings, the strings must be provided as single chars in
+ * single quotes. For example:
+ *
+ * USBMIDI_DEFINE_VENDOR_NAME('b', 'l', 'o', 'k', 'a', 's', '.', 'i', 'o');
+ *
+ * This works only on V-USB based implementation for now.
+ *
+ * As of writing, this must be placed in a .cpp source file instead of .ino due to a conflict
+ * with Arduino sketch preprocessing. An issue was submitted, hopefully it will get resolved:
+ *
+ * https://github.com/arduino/arduino-builder/issues/303
+ */
+#include <avr/pgmspace.h>
+
+#define USBMIDI_DEFINE_STRING(stringId, ...) \
+	unsigned char _usbmidi_get_ ## stringId ## _string(const unsigned char *&data) { \
+		static const char _TMP[] = { __VA_ARGS__ }; \
+		static const PROGMEM int _STRING[] = { \
+			(2*(sizeof(_TMP))+2) | (3<<8), \
+			__VA_ARGS__ \
+		}; \
+		data = (const unsigned char *)_STRING; \
+		return sizeof(_STRING); \
+	}
+
+#define USBMIDI_DEFINE_VENDOR_NAME(...) \
+	USBMIDI_DEFINE_STRING(vendor, __VA_ARGS__)
+
+#define USBMIDI_DEFINE_PRODUCT_NAME(...) \
+	USBMIDI_DEFINE_STRING(product, __VA_ARGS__)
+
 #endif // USB_MIDI_H
