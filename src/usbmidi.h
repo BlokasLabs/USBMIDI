@@ -44,10 +44,12 @@ extern USBMIDI_ USBMIDI;
  *
  * This works only on V-USB based implementation for now.
  *
- * As of writing, this must be placed in a .cpp source file instead of .ino due to a conflict
- * with Arduino sketch preprocessing. An issue was submitted, hopefully it will get resolved:
+ * As of writing, if using 1.8.5 Arduino IDE or earlier, this must be placed in a .cpp source file
+ * instead of .ino due to a conflict with Arduino sketch preprocessing. Reported issue:
  *
  * https://github.com/arduino/arduino-builder/issues/303
+ *
+ * The issue is already fixed in 1.9.0-beta Arduino IDE.
  */
 #include <avr/pgmspace.h>
 
