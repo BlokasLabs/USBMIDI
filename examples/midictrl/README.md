@@ -1,6 +1,6 @@
 # midictrl Example
 
-![midictrl Wiring Diagram](https://github.com/BlokasLabs/usbmidi/blob/master/arduino/libraries/usbmidi/examples/midictrl/midictrl.png)
+![midictrl Wiring Diagram](midictrl.png)
 
 # Required Parts
 
