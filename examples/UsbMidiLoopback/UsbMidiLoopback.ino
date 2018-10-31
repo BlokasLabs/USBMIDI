@@ -1,4 +1,3 @@
-#include <PluggableUSB.h>
 #include <usbmidi.h>
 
 void setup() {

@@ -10,6 +10,8 @@
 
 #if defined(USBCON)
 
+#include "fifo.h"
+
 #include <PluggableUSB.h>
 
 #include "midi_serialization.h"
@@ -47,6 +49,8 @@
 #ifndef USBMIDI_IN_BUFFER_SIZE
 #define USBMIDI_IN_BUFFER_SIZE 64
 #endif
+
+typedef TFifo<uint8_t, uint8_t, USBMIDI_IN_BUFFER_SIZE> Fifo;
 
 class UsbMidiModule : public PluggableUSBModule
 {
@@ -149,7 +153,7 @@ UsbMidiModule& UsbMidiModule::getInstance()
 int UsbMidiModule::_available()
 {
 	_poll();
-	return !m_midiInFifo.isEmpty();
+	return !m_midiInFifo.empty();
 }
 
 int UsbMidiModule::_read()
@@ -157,7 +161,7 @@ int UsbMidiModule::_read()
 	_poll();
 
 	u8 byte = 0;
-	m_midiInFifo.pop(&byte);
+	m_midiInFifo.pop(byte);
 
 	return byte;
 }
@@ -167,7 +171,7 @@ int UsbMidiModule::_peek()
 	_poll();
 
 	u8 byte = 0;
-	m_midiInFifo.peek(&byte);
+	m_midiInFifo.peek(byte);
 
 	return byte;
 }
