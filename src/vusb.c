@@ -10,9 +10,8 @@
  * See the LICENSE file for details.
  */
 
-#include <avr/io.h>
-
 #ifndef USBCON
+#include <avr/io.h>
 #	include "../vusb/usbdrv/usbdrv.c"
 #	include "../vusb/usbdrv/oddebug.c"
 #endif

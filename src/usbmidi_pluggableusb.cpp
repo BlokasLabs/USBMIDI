@@ -12,7 +12,8 @@
 
 #include "fifo.h"
 
-#include <PluggableUSB.h>
+#include <USB/PluggableUSB.h>
+#include <USB/USBCore.h>
 
 #include "midi_serialization.h"
 
@@ -88,16 +89,16 @@ private:
 
 	inline uint8_t getInterfaceId() const;
 
-	static uint8_t s_endpointTypes[2];
+	static uint32_t s_endpointTypes[2];
 	MidiToUsb m_midiToUsb;
 
 	Fifo m_midiInFifo;
 };
 
-uint8_t UsbMidiModule::s_endpointTypes[2] =
+uint32_t UsbMidiModule::s_endpointTypes[2] =
 {
-	EP_TYPE_BULK_OUT,
-	EP_TYPE_BULK_IN,
+	USB_ENDPOINT_TYPE_BULK,
+	USB_ENDPOINT_TYPE_BULK,
 };
 
 void UsbMidiModule::install()
@@ -114,7 +115,7 @@ int UsbMidiModule::getInterface(uint8_t *interfaceCount)
 {
 	*interfaceCount += 2;
 
-	u8 desc[] =
+	uint8_t desc[] =
 	{
 		D_AUDIO_CONTROL_INTERFACE(pluggedInterface),
 		D_AUDIO_CONTROL_INTERFACE_SPC(0x03),
@@ -130,7 +131,7 @@ int UsbMidiModule::getInterface(uint8_t *interfaceCount)
 		D_MIDI_JACK_EP_SPC(0x03),
 	};
 
-	return USB_SendControl(0, desc, sizeof(desc));
+	return USBD_SendControl(0, desc, sizeof(desc));
 }
 
 int UsbMidiModule::getDescriptor(USBSetup &setup)
@@ -160,7 +161,7 @@ int UsbMidiModule::_read()
 {
 	_poll();
 
-	u8 byte = 0;
+	uint8_t byte = 0;
 	m_midiInFifo.pop(byte);
 
 	return byte;
@@ -170,7 +171,7 @@ int UsbMidiModule::_peek()
 {
 	_poll();
 
-	u8 byte = 0;
+	uint8_t byte = 0;
 	m_midiInFifo.peek(byte);
 
 	return byte;
@@ -178,7 +179,7 @@ int UsbMidiModule::_peek()
 
 void UsbMidiModule::_flush()
 {
-	USB_Flush(getInEndpointId());
+	USBD_Flush(getInEndpointId());
 }
 
 size_t UsbMidiModule::_write(uint8_t c)
@@ -186,7 +187,7 @@ size_t UsbMidiModule::_write(uint8_t c)
 	midi_event_t midiEvent;
 	if (m_midiToUsb.process(c, midiEvent))
 	{
-		USB_Send(getInEndpointId(), &midiEvent, sizeof(midiEvent));
+		USBD_Send(getInEndpointId(), &midiEvent, sizeof(midiEvent));
 	}
 
 	return 1;
@@ -197,14 +198,14 @@ void UsbMidiModule::_poll()
 	midi_event_t midiEvent;
 	int numReceived;
 
-	while (numReceived = USB_Recv(getOutEndpointId(), &midiEvent, sizeof(midiEvent)))
+	while (numReceived = USBD_Recv(getOutEndpointId(), &midiEvent, sizeof(midiEvent)))
 	{
 		// MIDI USB messages are 4 bytes in size.
 		if (numReceived != 4)
 			return;
 
 		// They get decoded to up to 3 MIDI Serial bytes.
-		u8 data[3];
+		uint8_t data[3];
 
 		unsigned count = UsbToMidi::process(midiEvent, data);
 

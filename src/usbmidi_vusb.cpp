@@ -12,10 +12,10 @@
 
 // This USBMIDI implementation is based on V-USB-MIDI project: http://cryptomys.de/horo/V-USB-MIDI/index.html
 
+#ifndef USBCON
+
 #include <avr/io.h>
 #include <avr/pgmspace.h>
-
-#ifndef USBCON
 
 #include "usbdrv.h"
 
