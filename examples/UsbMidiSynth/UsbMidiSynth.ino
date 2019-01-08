@@ -38,7 +38,10 @@ void loop() {
 
     //Parse MIDI
     u8 command=0, channel=0, key=0, pitchbend=0, pblo=0, pbhi=0, velocity=0;
-    while(!(USBMIDI.peek() & 0b10000000)) USBMIDI.read(); //Drop bad commands
+
+    //Skip to beginning of next message (silently dropping stray data bytes)
+    while(!(USBMIDI.peek() & 0b10000000)) USBMIDI.read();
+
     command = USBMIDI.read();
     channel = (command & 0b00001111)+1;
     command = command & 0b11110000;

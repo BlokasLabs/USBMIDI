@@ -4,6 +4,9 @@
  * Forwards MIDI messages from USB to MIDI and back
  * If you short TX and RX pins of arduino, it should act as MIDI loopback
  *
+ * Note that Serial1 is used by Arduino Leonardo
+ * Serial port on your board might have different name (eg.: Serial, Serial2, ...)
+ *
  * (c) Tomas 'harvie' Mudrunka 2019
  */
 
@@ -16,7 +19,7 @@ void setup() {
 void loop() {
   //Forward MIDI
   while(USBMIDI.available()) Serial1.write(USBMIDI.read());
-  USBMIDI.flush();
-  while(Serial1.available()) USBMIDI.write(Serial1.read());
   Serial1.flush();
+  while(Serial1.available()) USBMIDI.write(Serial1.read());
+  USBMIDI.flush();
 }
