@@ -22,6 +22,9 @@
 #ifndef __usbconfig_h_included__
 #define __usbconfig_h_included__
 
+/* Include board-specific defaults */
+#include "usbboard.h"
+
 /*
 General Description:
 This file is an example configuration (with inline documentation) for the USB

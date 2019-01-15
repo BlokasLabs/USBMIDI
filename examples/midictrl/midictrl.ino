@@ -50,6 +50,9 @@ void setup() {
 }
 
 void loop() {
+	//Handle USB communication
+	USBMIDI.poll();
+
 	while (USBMIDI.available()) {
 		// We must read entire available data, so in case we receive incoming
 		// MIDI data, the host wouldn't get stuck.
