@@ -41,6 +41,14 @@ existing projects with MIDI over USB support.
 The library has two implementations, one is using Pluggable USB built-in Arduino library, for microcontrollers with native USB support (for example ATmega32U4),
 and another using V-USB library which implements USB functionality in software, so microcontrollers such as ATmega328P can be used.
 
+### Boards with Predefined Config
+
+You may contribute support for your board by adding in the definitions to [usbboard.h](https://github.com/BlokasLabs/USBMIDI/blob/master/src/usbboard.h) and opening a pull request.
+
+1. [Digispark](http://digistump.com/products/1)
+
+### Custom Boards
+
 To use the software USB implementation, the library must be reconfigured according to your wirings. The best way to do that is to create a custom [Arduino Board specification](https://github.com/arduino/Arduino/wiki/Arduino-IDE-1.5-3rd-party-Hardware-specification) for your project, and provide the following defines:
 
 | Define name                 | Default Value | Optional? |
@@ -50,6 +58,8 @@ To use the software USB implementation, the library must be reconfigured accordi
 | -DUSB_CFG_DPLUS_BIT         | 2             | N         |
 | -DUSB_CFG_PULLUP_IOPORTNAME | Undefined     | Y         |
 | -DUSB_CFG_PULLUP_BIT        | Undefined     | Y         |
+
+By default V-USB assumes pins with INT0 external interrupt function are used. If USB data lines are connected to other pins, additional variables must be defined. See [Optional MCU Description](https://github.com/BlokasLabs/USBMIDI/blob/master/src/usbconfig.h#L388) in usbconfig.h.
 
 Alternatively you may modify [src/usbconfig.h](src/usbconfig.h) by hand to match your board.
 
