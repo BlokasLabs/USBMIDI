@@ -1,9 +1,13 @@
 /*
- * Some common V-USB pinout defaults
- * This is based on how most people do the wiring for V-USB
+ * DigiSpark (Micronucleus) specific config
+ * This might work for other people too, but it's not enabled by default
+ * For details, see:
+ *  - https://github.com/micronucleus/micronucleus
+ *  - https://digistump.com/wiki/digispark/tutorials/connecting
+ *  - http://digistump.com/package_digistump_index.json
  */
 
-#if !defined(USB_CFG_IOPORTNAME) && !defined(USB_CFG_DMINUS_BIT) && !defined(USB_CFG_DPLUS_BIT)
+#ifdef ARDUINO_AVR_DIGISPARK
 
 #if defined (__AVR_ATtiny44__) || defined (__AVR_ATtiny84__)
 #define USB_CFG_IOPORTNAME      B
@@ -31,20 +35,6 @@
 #define USB_CFG_DPLUS_BIT       2
 
 #endif
-
-#endif
-
-
-/*
- * DigiSpark (Micronucleus) specific config
- * This might work for other people too, but it's not enabled by default
- * For details, see:
- *  - https://github.com/micronucleus/micronucleus
- *  - https://digistump.com/wiki/digispark/tutorials/connecting
- *  - http://digistump.com/package_digistump_index.json
- */
-
-#ifdef  ARDUINO_AVR_DIGISPARK
 
 #if defined (__AVR_ATtiny45__) || defined (__AVR_ATtiny85__)
 #define USB_INTR_CFG            PCMSK
