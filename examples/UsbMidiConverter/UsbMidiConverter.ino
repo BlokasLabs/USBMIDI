@@ -17,6 +17,9 @@ void setup() {
 }
 
 void loop() {
+  //Handle USB communication
+  USBMIDI.poll();
+
   //Forward MIDI
   while(USBMIDI.available()) Serial1.write(USBMIDI.read());
   Serial1.flush();

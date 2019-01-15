@@ -5,6 +5,9 @@ void setup() {
 }
 
 void loop() {
+	//Handle USB communication
+	USBMIDI.poll();
+
 	// While there's MIDI USB input available...
 	while (USBMIDI.available()) {
 		u8 b = USBMIDI.read();
