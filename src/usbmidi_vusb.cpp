@@ -24,7 +24,7 @@
 #include "usbmidi.h"
 
 // USB device descriptor
-static const PROGMEM char deviceDescrMIDI[] =
+static const PROGMEM unsigned char deviceDescrMIDI[] =
 {
 	18,                     // sizeof(usbDescriptorDevice): length of descriptor in bytes
 	USBDESCR_DEVICE,        // descriptor type
@@ -44,7 +44,7 @@ static const PROGMEM char deviceDescrMIDI[] =
 
 // B.2 Configuration Descriptor
 // USB configuration descriptor
-static const PROGMEM char configDescrMIDI[] =
+static const PROGMEM unsigned char configDescrMIDI[] =
 {
 	9,                      // sizeof(usbDescrConfig): length of descriptor in bytes
 	USBDESCR_CONFIG,        // descriptor type
