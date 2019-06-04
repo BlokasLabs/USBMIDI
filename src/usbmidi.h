@@ -29,6 +29,9 @@ public:
 	// Print interface.
 	virtual size_t write(uint8_t c);
 
+	// At the moment implemented for V-USB implementation only. USB_COUNT_SOF must be enabled.
+	void setSuspendResumeCallback(void (*callback)(bool suspended));
+
 	// Poll for new USB data. Should be called from loop() to handle incoming MIDI data.
 	void poll();
 };

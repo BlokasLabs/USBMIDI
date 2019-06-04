@@ -23,6 +23,16 @@
 #include "midi_serialization.h"
 #include "usbmidi.h"
 
+#include <arduino.h>
+
+#if defined USB_COUNT_SOF && USB_COUNT_SOF != 0
+#define USBMIDI_ENABLE_SUSPEND_RESUME
+#endif
+
+#ifdef USBMIDI_ENABLE_SUSPEND_RESUME
+static void (*g_suspendResumeCallback)(bool suspended) = NULL;
+#endif
+
 // USB device descriptor
 static const PROGMEM unsigned char deviceDescrMIDI[] =
 {
@@ -355,8 +365,51 @@ static uint8_t fillBuffer(uint8_t buffer[8])
 	return n * sizeof(ev);
 }
 
+void USBMIDI_::setSuspendResumeCallback(void (*callback)(bool suspended))
+{
+#ifdef USBMIDI_ENABLE_SUSPEND_RESUME
+	g_suspendResumeCallback = callback;
+#else
+	(void)callback;
+#endif
+}
+
 void USBMIDI_::poll()
 {
+#ifdef USBMIDI_ENABLE_SUSPEND_RESUME
+	static uint8_t lastSofCount = usbSofCount;
+	static unsigned long lastUpdate = millis();
+	static bool lastSuspended = false;
+
+	uint8_t sofCount = usbSofCount;
+	unsigned long now = millis();
+	if (sofCount != lastSofCount)
+	{
+		lastSofCount = sofCount;
+		lastUpdate = now;
+		if (lastSuspended)
+		{
+			if (g_suspendResumeCallback != NULL)
+				g_suspendResumeCallback(false);
+			lastSuspended = false;
+		}
+	}
+	else
+	{
+		if (!lastSuspended)
+		{
+			if (now - lastUpdate >= 15) // USB suspend detected.
+			{
+				if (g_suspendResumeCallback != NULL)
+					g_suspendResumeCallback(true);
+				cli();
+				usbInit();
+				sei();
+				lastSuspended = true;
+			}
+		}
+	}
+#endif
 	if (!g_midiOutput.empty() && usbInterruptIsReady())
 	{
 		uint8_t buffer[8];
