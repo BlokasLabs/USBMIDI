@@ -23,7 +23,7 @@
 #include "midi_serialization.h"
 #include "usbmidi.h"
 
-#include <arduino.h>
+#include <Arduino.h>
 
 #if defined USB_COUNT_SOF && USB_COUNT_SOF != 0
 #define USBMIDI_ENABLE_SUSPEND_RESUME
