@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2015-2018 UAB Vilniaus Blokas
  * All rights reserved.
  *
@@ -131,7 +131,7 @@ int UsbMidiModule::getInterface(uint8_t *interfaceCount)
 		D_MIDI_JACK_EP_SPC(0x03),
 	};
 
-	return USBD_SendControl(0, desc, sizeof(desc));
+	return USBDevice.sendControl(0, desc, sizeof(desc));
 }
 
 int UsbMidiModule::getDescriptor(USBSetup &setup)
@@ -179,7 +179,7 @@ int UsbMidiModule::_peek()
 
 void UsbMidiModule::_flush()
 {
-	USBD_Flush(getInEndpointId());
+	USBDevice.flush(getInEndpointId());
 }
 
 size_t UsbMidiModule::_write(uint8_t c)
@@ -187,7 +187,7 @@ size_t UsbMidiModule::_write(uint8_t c)
 	midi_event_t midiEvent;
 	if (m_midiToUsb.process(c, midiEvent))
 	{
-		USBD_Send(getInEndpointId(), &midiEvent, sizeof(midiEvent));
+		USBDevice.send(getInEndpointId(), &midiEvent, sizeof(midiEvent));
 	}
 
 	return 1;
@@ -198,7 +198,7 @@ void UsbMidiModule::_poll()
 	midi_event_t midiEvent;
 	int numReceived;
 
-	while (numReceived = USBD_Recv(getOutEndpointId(), &midiEvent, sizeof(midiEvent)))
+	while (numReceived = USBDevice.recv(getOutEndpointId(), &midiEvent, sizeof(midiEvent)))
 	{
 		// MIDI USB messages are 4 bytes in size.
 		if (numReceived != 4)
