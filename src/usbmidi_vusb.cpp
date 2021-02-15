@@ -280,9 +280,9 @@ static void midiUsbInit(void)
 #endif
 
 	// USB Reset by device only required on Watchdog Reset.
-	uint8_t j = 0;
+	volatile uint8_t j = 0;
 	while (--j) {   /* USB Reset by device only required on Watchdog Reset */
-		uint8_t i = 0;
+		volatile uint8_t i = 0;
 		while (--i);  /* delay >10ms for USB reset */
 	}
 
